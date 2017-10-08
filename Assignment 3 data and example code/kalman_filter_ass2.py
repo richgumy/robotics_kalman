@@ -6,9 +6,8 @@ Kalman filter demonstration program to estimate position of a 1D robot using
 6 sensors
 
 TO DO NEXT:
-	- Make a function to ensure that the weighting of a sensor changes if the
-	estimate is out of range of the sensor
 	- Make Classes for fucking everything OOP OOP
+	- Clean it up
 	- Extended Kalman?
 	
 """
@@ -60,19 +59,35 @@ class Sensor(object):
 			
 	def ir_range(self,type_,data):
 		if type_.lower() == 'ir':
-			a_co = np.ones(self.data.shape) * self.a
-			b_co = np.ones(self.data.shape) * self.b
-			distance = a_co/(self.data - b_co)
+			distance = self.a/(self.data - self.b)
 		else:
 			distance = self.data
 		return distance
 	
-# Load training data
+# Load training data to get sensor variances
 filename = 'training1.csv'
 data = np.loadtxt(filename, delimiter=',', skiprows=1)
 
 # Split into columns
 index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
+
+# Generate error values for each sensor
+sonar1_error = range_ - sonar1
+sonar2_error = range_ - sonar2
+ir1_error = range_ - 
+
+# Measurement noise variances (training1, training2)
+var_S1 = var(sonar1_error) # (0.19505585259364139, 0.58587920724762343)
+var_S2 = var(sonar2_error) # (1.4855465481829488, 0.90549771246436972)
+
+Var_S1_S2 = 1/(1/var_S1+1/var_S2)
+
+# Load test data
+filename = 'test.csv'
+data = np.loadtxt(filename, delimiter=',', skiprows=1)
+
+# Split into columns
+index, time, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
 
 # Convert raw_ir voltages to distances
 ir1 = ir_voltage_to_range(raw_ir1,0.1660,-0.0022)
@@ -88,14 +103,13 @@ ir2_min_max = [0.04,0.3]
 ir3_min_max = [0.1,0.8]
 ir4_min_max = [1.0,5]
 
-# Initial position + time
-x = range_[0]
-t = time[0]
 # Time interval just used for process noise for now
 dt = 0.1
-# Speed
+
+# Speed commanded by turtlebot
 v = velocity_command
-# Plot arrays
+
+# Declare plot arrays
 x_array = []
 t_array = []
 k_array = []
@@ -108,23 +122,6 @@ std_W = 0.02 * dt
 # Process noise variances
 var_W = std_W ** 2
 
-#~ # Generate error values for each sensor
-sonar1_error = range_ - sonar1
-sonar2_error = range_ - sonar2
-
-# Measurement noise variances (training1, training2)
-var_S1 = var(sonar1_error) # (0.19505585259364139, 0.58587920724762343)
-var_S2 = var(sonar2_error) # (1.4855465481829488, 0.90549771246436972)
-
-Var_S1_S2 = 1/(1/var_S1+1/var_S2)
-
-# Load test data
-filename = 'test.csv'
-data = np.loadtxt(filename, delimiter=',', skiprows=1)
-
-# Split into columns
-index, time, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
-
 # IR variances found in matlab with training data.. try again
 var_IR = [0.3409, 0.2631, 0.6688, 0.6947]
 
@@ -134,13 +131,13 @@ b = [-0.0022,0.0473,0.1086,1.2021]
 
 sonar1_obj = Sensor(sonar1_min_max[0],sonar1_min_max[1],var_S1,'Sonar',sonar1)
 sonar2_obj = Sensor(sonar2_min_max[0],sonar2_min_max[1],var_S2,'Sonar',sonar2)
-ir1_obj = Sensor(ir1_min_max[0],ir1_min_max[1],var_IR[0],'ir',raw_ir1,a[0],b[0])
-ir2_obj = Sensor(ir2_min_max[0],ir2_min_max[1],var_IR[1],'ir',raw_ir2,a[1],b[1])
+#~ ir1_obj = Sensor(ir1_min_max[0],ir1_min_max[1],var_IR[0],'ir',raw_ir1,a[0],b[0])
+#~ ir2_obj = Sensor(ir2_min_max[0],ir2_min_max[1],var_IR[1],'ir',raw_ir2,a[1],b[1])
 #~ ir3_obj = Sensor(ir3_min_max[0],ir3_min_max[1],var_IR[2],'ir',raw_ir3,a[2],b[2])
 #~ ir4_obj = Sensor(ir4_min_max[0],ir4_min_max[1],var_IR[3],'ir',raw_ir4,a[3],b[3])
 
 # Start with a estimate of starting position
-x_post = 0.2
+x_post = 0.1
 var_X_post = 0.1
 
 for i in range(1,len(time)):

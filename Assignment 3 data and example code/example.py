@@ -16,22 +16,12 @@ def ir_voltage_to_range(voltage,a,b):
 	distance = a/(voltage - b)
 	return distance
 	
-def smart_filter(range_,min_,max_):
-	"""Filter out any unexpectedly high or low range values"""
-	for i in range(len(range_)):
-		if range_[i] > max_ or range_[i] < min_:
-				#~ range_[i] = range_[i-1]
-				range_[i] = 0
-	return range_
-
 # Load data
 filename = 'training2.csv'
 data = np.loadtxt(filename, delimiter=',', skiprows=1)
 
 # Split into columns
 index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
-
-
 
 # Plot true range and sonar measurements over time
 plt.figure(figsize=(12, 4))
