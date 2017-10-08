@@ -6,7 +6,7 @@ Kalman filter demonstration program to estimate position of a 1D robot using
 6 sensors
 
 TO DO NEXT:
-	- Make Classes for fucking everything OOP OOP
+	- Make Classes for everything OOP OOP
 	- Clean it up
 	- Extended Kalman?
 	
