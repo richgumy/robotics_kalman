@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 ENMT482 - University of Canterbury
 Richie Ellingham
@@ -29,8 +30,9 @@ def ir_voltage_to_range(voltage,a,b):
 	return distance
 	
 class IterRegistry(type):
-    def __iter__(cls):
-        return iter(cls._registry)
+	"""A Metaclass that allows a class to be iterable"""
+	def __iter__(cls):
+		return iter(cls._registry)
 
 class Sensor(object):
 	"""Creates sensor class for IR and sonar sensors"""
@@ -63,30 +65,16 @@ class Sensor(object):
 		else:
 			distance = self.data
 		return distance
+		
+
 	
-# Load training data to get sensor variances
-filename = 'training1.csv'
-data = np.loadtxt(filename, delimiter=',', skiprows=1)
-
-# Split into columns
-index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
-
-# Generate error values for each sensor
-sonar1_error = range_ - sonar1
-sonar2_error = range_ - sonar2
-ir1_error = range_ - 
-
-# Measurement noise variances (training1, training2)
-var_S1 = var(sonar1_error) # (0.19505585259364139, 0.58587920724762343)
-var_S2 = var(sonar2_error) # (1.4855465481829488, 0.90549771246436972)
-
-Var_S1_S2 = 1/(1/var_S1+1/var_S2)
-
-# Load test data
+	
+# Load test data for kalman application
 filename = 'test.csv'
 data = np.loadtxt(filename, delimiter=',', skiprows=1)
 
 # Split into columns
+#~ index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
 index, time, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
 
 # Convert raw_ir voltages to distances
@@ -97,11 +85,11 @@ ir4 = ir_voltage_to_range(raw_ir4,1.5724,1.2021)
 
 # Sensor lower limits (all in meters)
 sonar1_min_max = [0.02,4]
-sonar2_min_max = [0.3,5]
-ir1_min_max = [0.15,1.5]
-ir2_min_max = [0.04,0.3]
-ir3_min_max = [0.1,0.8]
-ir4_min_max = [1.0,5]
+sonar2_min_max = [0.45,5]
+ir1_min_max = [0.3,1]
+ir2_min_max = [0.2,0.3]
+ir3_min_max = [0.15,0.8]
+ir4_min_max = [1,5]
 
 # Time interval just used for process noise for now
 dt = 0.1
@@ -114,7 +102,8 @@ x_array = []
 t_array = []
 k_array = []
 z_array = []
-range_array = []
+s2_array = []
+#~ range_array = []
 
 # Position process noise standard deviation
 std_W = 0.02 * dt
@@ -122,15 +111,18 @@ std_W = 0.02 * dt
 # Process noise variances
 var_W = std_W ** 2
 
-# IR variances found in matlab with training data.. try again
-var_IR = [0.3409, 0.2631, 0.6688, 0.6947]
+# IR variances found in matlab with ALL of the given training data
+var_IR = [0.3072, 0.2260, 0.8559, 0.8330]
+var_sonar = [0.5396, 0.0336]
+
+var_sensors = var_sonar[0]
 
 # LSE best line of fit coefficients
-a = [0.1660,0.1560,0.2848,1.5724]
-b = [-0.0022,0.0473,0.1086,1.2021]
+a = [0.1627, 0.1558, 0.2925, 1.5664]
+b = [-0.0022, 0.0549, 0.1024, 1.2081]
 
-sonar1_obj = Sensor(sonar1_min_max[0],sonar1_min_max[1],var_S1,'Sonar',sonar1)
-sonar2_obj = Sensor(sonar2_min_max[0],sonar2_min_max[1],var_S2,'Sonar',sonar2)
+sonar1_obj = Sensor(sonar1_min_max[0],sonar1_min_max[1],var_sonar[0],'Sonar',sonar1)
+sonar2_obj = Sensor(sonar2_min_max[0],sonar2_min_max[1],var_sonar[1],'Sonar',sonar2)
 #~ ir1_obj = Sensor(ir1_min_max[0],ir1_min_max[1],var_IR[0],'ir',raw_ir1,a[0],b[0])
 #~ ir2_obj = Sensor(ir2_min_max[0],ir2_min_max[1],var_IR[1],'ir',raw_ir2,a[1],b[1])
 #~ ir3_obj = Sensor(ir3_min_max[0],ir3_min_max[1],var_IR[2],'ir',raw_ir3,a[2],b[2])
@@ -148,8 +140,8 @@ for i in range(1,len(time)):
 	var_X_prior = var_X_post + var_W
 	
 	# Declare measurement + measurement variables
-	nume = 0
-	denom = 0
+	z_nume = 0
+	z_denom = 0
 	z = 0
 		
 	# Measure range
@@ -157,59 +149,61 @@ for i in range(1,len(time)):
 		sensor.within_sensor_range(x_post,sensor.min_,sensor.max_,sensor.within_range)
 		if sensor.within_range:
 			sensor.data = sensor.ir_range(sensor.type_,sensor.data)
-			nume += sensor.data[i]/sensor.var
-			denom += 1/sensor.var
-	if denom == 0:
-		z = nume
+			z_nume += sensor.data[i]/sensor.var
+			z_denom += 1/sensor.var
+	if z_denom == 0:
+		z = z_nume
 	else:
-		z = nume/denom
+		var_sensors = 1/(z_denom)
+		z = z_nume/z_denom
 	
 	# Estimate position from measurement ( using sensor model )
 	x_infer = z - (v[i-1] * dt)
 	
 	# Calculate Kalman gain
-	K = var_X_prior / ( Var_S1_S2 + var_X_prior )
+	K = var_X_prior / ( var_sensors + var_X_prior )
 	
 	# Caclculate posterior estimate of position and its variance
 	x_post = K * x_infer + (1 - K) * x_prior
 	
-	var_X_post = 1/(1/Var_S1_S2+1/var_X_prior)
+	var_X_post = 1/(1/var_sensors+1/var_X_prior)
 	
 	x_array.append(x_post)
 	t_array.append(time[i])
 	z_array.append(z)
 	k_array.append(K)
-	range_array.append(range_[i])
+	#~ range_array.append(range_[i])
 
-# Plot distance
+# Plot distance estimate
 plt.figure()
-plt.plot(t_array, range_array, '-', alpha=0.2)
-plt.plot(t_array, x_array, '.', alpha=0.2)
+#~ plt.plot(t_array, range_array, '-', alpha=0.2)
+plt.plot(t_array, x_array, 'r.', alpha=0.2)
 plt.axhline(0, color='k')
-plt.title('Distance Estimator')
+plt.title('Distance Estimate')
 plt.xlabel('Time (s)')
 plt.ylabel('Distance (m)')
 # Plot z
 plt.figure()
-plt.plot(t_array, range_array, '-', alpha=0.2)
+#~ plt.plot(t_array, range_array, '-', alpha=0.2)
 plt.plot(t_array, z_array, '.', alpha=0.2)
 plt.axhline(0, color='k')
 plt.title('Measured')
 plt.xlabel('Time (s)')
 plt.ylabel('Distance (m)')
-# Plot actual x
+# Plot Sonar values
 #~ plt.figure()
-#~ plt.plot(t_array, range_array, '-', alpha=0.2)
+#~ plt.plot(time, sonar2, 'b.', alpha=0.2)
+#~ plt.plot(time, sonar1, 'r.', alpha=0.2)
 #~ plt.axhline(0, color='k')
 #~ plt.title('Actual')
 #~ plt.xlabel('Time (s)')
 #~ plt.ylabel('Distance (m)')
 # Plot k gain
-plt.figure()
-plt.plot(t_array, k_array, '.', alpha=0.2)
-plt.axhline(0, color='k')
-plt.title('Kalman Gain')
-plt.xlabel('Time (s)')
-plt.ylabel('Gain')
+#~ plt.figure()
+#~ plt.plot(t_array, k_array, '.', alpha=0.2)
+#~ plt.axhline(0, color='k')
+#~ plt.title('Kalman Gain')
+#~ plt.xlabel('Time (s)')
+#~ plt.ylabel('Gain')
 plt.show()
 

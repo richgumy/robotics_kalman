@@ -38,17 +38,10 @@ plt.plot(time, range_)
 plt.title('Sonar1')
 plt.xlabel('Time (s)')
 
-#~ plt.subplot(133)
-#~ plt.plot(time, sonar2, '.', alpha=0.2)
-#~ plt.plot(time, range_)
-#~ plt.title('Sonar2')
-#~ plt.xlabel('Time (s)')
-
 plt.subplot(133)
-ir3_range = ir_voltage_to_range(raw_ir3,0.2848,0.1086)
-plt.plot(time, smart_filter(ir3_range,0,5), '.', alpha=0.2)
+plt.plot(time, sonar2, '.', alpha=0.2)
 plt.plot(time, range_)
-plt.title('IR1')
+plt.title('Sonar2')
 plt.xlabel('Time (s)')
 
 # Plot sonar error
