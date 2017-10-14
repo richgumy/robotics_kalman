@@ -70,12 +70,12 @@ class Sensor(object):
 	
 	
 # Load test data for kalman application
-filename = 'test.csv'
+filename = 'training1.csv'
 data = np.loadtxt(filename, delimiter=',', skiprows=1)
 
 # Split into columns
-#~ index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
-index, time, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
+index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
+#~ index, time, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
 
 # Convert raw_ir voltages to distances
 ir1 = ir_voltage_to_range(raw_ir1,0.1660,-0.0022)
