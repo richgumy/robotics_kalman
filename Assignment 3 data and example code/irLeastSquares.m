@@ -11,7 +11,7 @@
 % • ir3 is a Sharp GP2Y0A21YK infrared rangefinder (10–80cm)
 % • ir4 is a Sharp GP2Y0A710K0F infrared rangefinder (1–5m)
    
-function [a,b,vari,error] = irLeastSquares(filename)
+function [k2] = irLeastSquares(filename)
     close all
     mat = csvread(filename,1,1);
 
@@ -26,10 +26,10 @@ function [a,b,vari,error] = irLeastSquares(filename)
     sonar2 = mat(:,9);
     
     % Specified Sensor ranges
-%     ir_min_max_values = [0.15 1.25;
-%                     0.04 0.3;
-%                     0.1 0.8;
-%                     1 5];
+    ir_min_max_values = [0.15 0.3;
+                    0.04 0.3;
+                    0.1 0.8;
+                    1 5];
     % Max range
 %     ir_min_max_values = [0 5;
 %                     0 5;
@@ -38,12 +38,12 @@ function [a,b,vari,error] = irLeastSquares(filename)
 
     % Ranges should be limited with no upper limit as these sensors will
     % be neglected as their variance is so large
-    ir_min_max_values = [0.3 5;
-                    0.3 5;
-                    0.55 5;
-                    1 5];
-               
-    a = zeros(4,1)
+%     ir_min_max_values = [0.3 5;
+%                     0.3 5;
+%                     0.55 5;
+%                     1 5];
+%                
+    a = zeros(4,1);
     b = a;
     
     raw_ir_all = [raw_ir1 raw_ir2 raw_ir3 raw_ir4];
@@ -92,25 +92,35 @@ function [a,b,vari,error] = irLeastSquares(filename)
 %         plot(filtered_time,filtered_dist,'ko',time,range,'b-');
 %         ystring = sprintf('IR%d Range',i);
 %         xlabel('Time');ylabel(ystring)
+        filtered_ir = inv_poly_funct(x,filtered_ir);
         
-        error = filtered_range - filtered_ir;
-        vari(i) = sum((error - sum(error)/length(error)).^2)/(length(error)-1)
-        var_dist = movvar(error,10);
+        [sorted_range, ind] = sort(filtered_range);
+        sorted_ir = zeros(1,length(sorted_range));
+%         new_error = zeros(size(error));
+        for m=1:length(sorted_range)
+%             new_error(m) = error(ind(m));
+            sorted_ir(m) = filtered_ir(ind(m));
+        end
+        
+        var_dist = movvar(sorted_ir,20);
+        
+        poly2_funct = @(x,xdata)  x(1)*xdata.^2 + x(2)*xdata + x(3);
+        poly4_funct = @(x,xdata)  x(1)*xdata.^4 + x(2)*xdata.^2 + x(3);
+        exp_funct = @(x,xdata) x(1)*exp(x(2)*xdata) + x(3);
+        
+        k2_0 = [0 0 0];
+        k2(i,:) = lsqcurvefit(poly2_funct,k2_0,sorted_range,var_dist);
+        k4_0 = [0 0 0];
+        k4(i,:) = lsqcurvefit(poly4_funct,k4_0,sorted_range,var_dist);
+        e_0 = [0 0 0];
+        e(i,:) = lsqcurvefit(exp_funct,e_0,sorted_range,var_dist);
+        
         figure
-        plot(filtered_range, var_dist, 'g.')
-        k0 = [1 1];
+        plot(sorted_range, var_dist, 'g.',x_range,poly2_funct(k2(i,:),...
+                x_range),'b-',x_range,poly4_funct(k4(i,:),x_range),'r-',...
+                x_range,exp_funct(e(i,:),x_range),'k-')
         
-        k(i,:) = lsqcurvefit(linear_eqn,k0,filtered_range,error)
-        
-        figure
-        plot(filtered_range,error,'ko',x_range,linear_eqn(k(i,:),x_range),'b-');
-        xlabel('Range (m)');ylabel('Error(m)');
-        length(error)
-        length(linear_eqn(k(i,:),x_range))
-        % Make error_of_error a function of x for kalman filter code:
-        % error_of_error = @(x) error - linear_eqn([k1 k2],x);
-%         error_of_error = error - linear_eqn(k(i,:),x_range);
-%         variance_error(i,1) = sum((error_of_error - sum(error_of_error)/length(error_of_error)).^2)/(length(error_of_error)-1)
+        legend('Data', 'Poly2 fit', 'Poly4 fit', 'Exp fit'); 
 
     end
 end
