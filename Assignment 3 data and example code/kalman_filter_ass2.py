@@ -17,6 +17,7 @@ from numpy.random import randn
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 
 # Load test data for kalman application
 filename = 'training1.csv'
@@ -64,7 +65,7 @@ class Sensor(object):
 		self.roll_var = rolling_var
 		
 	def __str__(self):
-		return('Type:{}\nRange:{}-{}m\nVariance:{}\n'.format(self.type_,self.min_,self.max_,self.var))
+		return('Type:{}\nRange:{}-{}m\nVariance:{}'.format(self.type_,self.min_,self.max_,self.var))
 	
 	def within_sensor_range(self,estimate,min_,max_,within_range):
 		if estimate < min_ or estimate > max_:
@@ -81,8 +82,11 @@ class Sensor(object):
 
 def LUT(xdata,ydata,xvalue,res=100):
 	i = 0
+	if len(xdata) != len(ydata):
+		sys.stderr.write("xdata and ydata are not same lenghth")
 	# Check if xvalue is within window range
 	while True:
+		#~ print("X index {}".format(((i+1)*len(xdata))//res))
 		#~ print "{} < {} < {}".format(xdata[(i*len(xdata))//res],xvalue,xdata[((i+1)*len(xdata))//res])
 		if ((xvalue >= xdata[(i*len(xdata))//res]) and \
 		(xvalue <= xdata[((i+1)*len(xdata))//res])):
@@ -90,12 +94,24 @@ def LUT(xdata,ydata,xvalue,res=100):
 		
 		i = i + 1 #iterate to next window of LUT	
 		
-		if i == 100:
-			#~ print("fuck")
+		if i == 99:
 			break
+	#~ print ("Xval {}  Y index {}  Y length {}".format(xvalue,((i+1)*len(ydata)//res),len(ydata)))
 	
-	yvalue = ydata[((i)*len(xdata))//res-1] #result
+	if ((i+1)*len(xdata))//res >= len(ydata):
+		yvalue = ydata[len(ydata)-1]
+	else:
+		yvalue = ydata[((i+1)*len(xdata))//res] #result
 	return yvalue
+
+# Testing LUT function:
+#~ xdata = range(20)
+#~ ydata = []
+#~ for x in xdata:
+	#~ ydata.append(x**2)
+#~ xvalue = 13
+#~ res = 11
+#~ print(LUT(xdata,ydata,xvalue,res))
 
 # Convert raw_ir voltages to distances
 ir1 = ir_voltage_to_range(raw_ir1,0.1660,-0.0022)
@@ -205,14 +221,21 @@ ir4_obj.roll_var = rollvar_ir4
 sonar1_obj.roll_var = rollvar_sonar1
 sonar2_obj.roll_var = rollvar_sonar2
 
-#~ rollvar_ir1.to_csv("rollvar_ir1")
-#~ print(sorted_range)
+
+print(LUT(sorted_range,sonar1_obj.roll_var,0.4))
+
+rollvar_sonar1.to_csv("rollvar_sonar1")
+rollvar_sonar2.to_csv("rollvar_sonar2")
+rollvar_ir1.to_csv("rollvar_ir1")
+rollvar_ir2.to_csv("rollvar_ir2")
+rollvar_ir3.to_csv("rollvar_ir3")
+rollvar_ir4.to_csv("rollvar_ir4")
 
 # Start with a estimate of starting position
 x_post = 0.1
 var_X_post = 0.1
 
-for i in range(4):#range(1,len(time)/100):
+for i in range(1,len(time)):
 	dt = time[i] - time[i-1]
 	
 	# Calculate prior estimate of position and its variance ( using motion model )
@@ -226,13 +249,11 @@ for i in range(4):#range(1,len(time)/100):
 		
 	# Measure range
 	for sensor in Sensor:
-		print sensor
+		#~ print x_post
 		sensor.within_sensor_range(x_post,sensor.min_,sensor.max_,sensor.within_range)
-		if sensor.within_range:
+		if sensor.within_range and not np.isnan(LUT(sorted_range,sensor.roll_var,x_post)):
 			sensor.data = sensor.ir_range(sensor.type_,sensor.data)
 			z_nume += sensor.data[i]/LUT(sorted_range,sensor.roll_var,x_post)
-			print(LUT(sorted_range,sensor.roll_var,x_post))
-			print(z_nume)
 			z_denom += 1/LUT(sorted_range,sensor.roll_var,x_post)
 	if z_denom == 0:
 		z = z_nume
@@ -241,7 +262,7 @@ for i in range(4):#range(1,len(time)/100):
 		z = z_nume/z_denom
 	
 	# Estimate position from measurement ( using sensor model )
-	x_infer = z #- (v[i-1] * dt)
+	x_infer = z 
 	
 	# Calculate Kalman gain
 	K = var_X_prior / ( var_sensors + var_X_prior )
@@ -295,6 +316,20 @@ plt.ylabel('Distance (m)')
 #~ plt.ylabel('Distance (m)')
 
 #~ # Plot Rolling Variances
+#################################
+#~ plt.figure()
+#~ plt.plot(sorted_range,sonar2_obj.roll_var, '.', alpha=0.2)
+#~ plt.axhline(0, color='k')
+#~ plt.title('Sorted Roll Var sonar2')
+#~ plt.xlabel('Range')
+#~ plt.ylabel('Variance')
+plt.figure()
+plt.plot(sorted_range,sonar1_obj.roll_var, '.', alpha=0.2)
+plt.axhline(0, color='k')
+plt.title('Sorted Roll Var sonar1')
+plt.xlabel('Range')
+plt.ylabel('Variance')
+#################################
 #~ plt.figure()
 #~ plt.plot(sorted_range,rollvar_ir1, '.', alpha=0.2)
 #~ plt.axhline(0, color='k')
