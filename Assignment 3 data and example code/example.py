@@ -23,6 +23,10 @@ data = np.loadtxt(filename, delimiter=',', skiprows=1)
 # Split into columns
 index, time, range_, velocity_command, raw_ir1, raw_ir2, raw_ir3, raw_ir4, sonar1, sonar2 = data.T
 
+# LSE best line of fit coefficients
+a = [0.1627, 0.1558, 0.2925, 1.5664]
+b = [-0.0022, 0.0549, 0.1024, 1.2081]
+
 # Plot true range and sonar measurements over time
 plt.figure(figsize=(12, 4))
 
@@ -44,15 +48,6 @@ plt.plot(time, range_)
 plt.title('Sonar2')
 plt.xlabel('Time (s)')
 
-# Plot sonar error
-
-# Generate error values for each sonar sensor
-sonar1_error = range_ - sonar1
-sonar2_error = range_ - sonar2
-
-# Measurement noise variances
-var_S1 = var(sonar1_error)
-var_S2 = var(sonar2_error)
 
 plt.figure(figsize=(12, 5))
 
@@ -74,22 +69,26 @@ plt.xlabel('Time (s)')
 plt.figure(figsize=(8, 7))
 
 plt.subplot(221)
-plt.plot(range_, raw_ir1, '.', alpha=0.5)
+plt.plot(time, ir_voltage_to_range(raw_ir1,a[0],b[0]), '.', alpha=0.5)
+plt.plot(time, range_)
 plt.title('IR1')
 plt.ylabel('Measurement (V)')
 
 plt.subplot(222)
-plt.plot(range_, raw_ir2, '.', alpha=0.5)
+plt.plot(time, ir_voltage_to_range(raw_ir2,a[1],b[1]), '.', alpha=0.5)
+plt.plot(time, range_)
 plt.title('IR2')
 
 plt.subplot(223)
-plt.plot(range_, raw_ir3, '.', alpha=0.5)
+plt.plot(time, ir_voltage_to_range(raw_ir3,a[2],b[2]), '.', alpha=0.5)
+plt.plot(time, range_)
 plt.title('IR3')
 plt.xlabel('Range (m)')
 plt.ylabel('Measurement (V)')
 
 plt.subplot(224)
-plt.plot(range_, raw_ir4, '.', alpha=0.5)
+plt.plot(time, ir_voltage_to_range(raw_ir4,a[3],b[3]), '.', alpha=0.5)
+plt.plot(time, range_)
 plt.title('IR4')
 plt.xlabel('Range (m)')
 plt.show()
