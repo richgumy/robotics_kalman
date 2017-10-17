@@ -136,10 +136,10 @@ var_post = []
 # Sensor lower limits (all in meters)
 sonar1_min_max = [0.02,4]
 sonar2_min_max = [0.45,5]
-ir1_min_max = [0.3,1]
-ir2_min_max = [0.2,0.3]
-ir3_min_max = [0.15,0.8]
-ir4_min_max = [1,5]
+ir1_min_max = [0.15,1]
+ir2_min_max = [0.2,0.4]
+ir3_min_max = [0.15,0.5]
+ir4_min_max = [2.5,5]
 
 # IR variances found in matlab with ALL of the given training data
 var_IR = [0.3072, 0.2260, 0.8559, 0.8330]
@@ -153,10 +153,10 @@ b = [-0.0022, 0.0549, 0.1024, 1.2081]
 
 sonar1_obj = Sensor(sonar1_min_max[0],sonar1_min_max[1],var_sonar[0],'Sonar',sonar1)
 sonar2_obj = Sensor(sonar2_min_max[0],sonar2_min_max[1],var_sonar[1],'Sonar',sonar2)
-#~ ir1_obj = Sensor(ir1_min_max[0],ir1_min_max[1],var_IR[0],'ir',raw_ir1,a[0],b[0])
-#~ ir2_obj = Sensor(ir2_min_max[0],ir2_min_max[1],var_IR[1],'ir',raw_ir2,a[1],b[1])
+ir1_obj = Sensor(ir1_min_max[0],ir1_min_max[1],var_IR[0],'ir',raw_ir1,a[0],b[0])
+ir2_obj = Sensor(ir2_min_max[0],ir2_min_max[1],var_IR[1],'ir',raw_ir2,a[1],b[1])
 ir3_obj = Sensor(ir3_min_max[0],ir3_min_max[1],var_IR[2],'ir',raw_ir3,a[2],b[2])
-#~ ir4_obj = Sensor(ir4_min_max[0],ir4_min_max[1],var_IR[3],'ir',raw_ir4,a[3],b[3])
+ir4_obj = Sensor(ir4_min_max[0],ir4_min_max[1],var_IR[3],'ir',raw_ir4,a[3],b[3])
 
 #Sort range in ascending order of values
 sorted_range = pd.DataFrame(data=range_)
@@ -164,32 +164,32 @@ sorted_range = sorted_range.sort_values([0])
 sorted_range = sorted_range[0].tolist()
 
 #Sort sensor Data based on range with window size set
-window = 10
-# IR
-#~ ir1_obj.data = ir1_obj.ir_range(ir1_obj.type_,ir1_obj.data)
-#~ rollvar_ir1= pd.DataFrame(data=ir1_obj.data,index=range_)
-#~ rollvar_ir1 = rollvar_ir1.sort_index()
-#~ rollvar_ir1 = pd.rolling_std(rollvar_ir1,window)**2 #Calculate Var
-#~ rollvar_ir1 = rollvar_ir1[0].tolist()
+window = 100
+#~ # IR
+ir1_obj.data = ir1_obj.ir_range(ir1_obj.type_,ir1_obj.data)
+rollvar_ir1= pd.DataFrame(data=ir1_obj.data,index=range_)
+rollvar_ir1 = rollvar_ir1.sort_index()
+rollvar_ir1 = pd.rolling_std(rollvar_ir1,window)**2 #Calculate Var
+rollvar_ir1 = rollvar_ir1[0].tolist()
 #~ #2
-#~ ir2_obj.data = ir2_obj.ir_range(ir2_obj.type_,ir2_obj.data)
-#~ rollvar_ir2= pd.DataFrame(data=ir2_obj.data,index=range_)
-#~ rollvar_ir2 = rollvar_ir2.sort_index()
-#~ rollvar_ir2 = pd.rolling_std(rollvar_ir2,window)**2
-#~ rollvar_ir2 = rollvar_ir2[0].tolist()
+ir2_obj.data = ir2_obj.ir_range(ir2_obj.type_,ir2_obj.data)
+rollvar_ir2= pd.DataFrame(data=ir2_obj.data,index=range_)
+rollvar_ir2 = rollvar_ir2.sort_index()
+rollvar_ir2 = pd.rolling_std(rollvar_ir2,window)**2
+rollvar_ir2 = rollvar_ir2[0].tolist()
 
-#~ #3
+#3
 ir3_obj.data = ir3_obj.ir_range(ir3_obj.type_,ir3_obj.data)
 rollvar_ir3= pd.DataFrame(data=ir3_obj.data,index=range_)
 rollvar_ir3 = rollvar_ir3.sort_index()
 rollvar_ir3 = pd.rolling_std(rollvar_ir3,window)**2
 rollvar_ir3 = rollvar_ir3[0].tolist()
 #4
-#~ ir4_obj.data = ir4_obj.ir_range(ir4_obj.type_,ir4_obj.data)
-#~ rollvar_ir4 = pd.DataFrame(data=ir4_obj.data,index=range_)
-#~ rollvar_ir4 = rollvar_ir4.sort_index()
-#~ rollvar_ir4 = pd.rolling_std(rollvar_ir4,window)**2
-#~ rollvar_ir4 = rollvar_ir4[0].tolist()
+ir4_obj.data = ir4_obj.ir_range(ir4_obj.type_,ir4_obj.data)
+rollvar_ir4 = pd.DataFrame(data=ir4_obj.data,index=range_)
+rollvar_ir4 = rollvar_ir4.sort_index()
+rollvar_ir4 = pd.rolling_std(rollvar_ir4,window)**2
+rollvar_ir4 = rollvar_ir4[0].tolist()
 
 # Sonar
 #1
@@ -208,10 +208,11 @@ rollvar_sonar2 = rollvar_sonar2[0].tolist()
 
 
 #~ # Write rolling vars to sensor instances
-#~ ir1_obj.roll_var = rollvar_ir1
-#~ ir2_obj.roll_var = rollvar_ir2
-ir3_obj.roll_var = rollvar_ir3
-#~ ir4_obj.roll_var = rollvar_ir4
+scale_var = 1
+ir1_obj.roll_var = [x * scale_var for x in rollvar_ir1]
+ir2_obj.roll_var = [x * scale_var for x in rollvar_ir2]
+ir3_obj.roll_var = [x * scale_var * 100 for x in rollvar_ir3]
+ir4_obj.roll_var = [x * scale_var for x in rollvar_ir4]
 sonar1_obj.roll_var = rollvar_sonar1
 sonar2_obj.roll_var = rollvar_sonar2
 
@@ -266,6 +267,7 @@ for i in range(1,len(time)):
 	
 	# Calculate Kalman gain
 	K = var_X_prior / ( var_sensors + var_X_prior )
+	print(K)
 	# Caclculate posterior estimate of position and its variance
 	x_post = K * x_infer + (1 - K) * x_prior
 	
@@ -311,12 +313,12 @@ plt.title('Measured')
 plt.xlabel('Time (s)')
 plt.ylabel('Distance (m)')
 # Plot X post variance values
-plt.figure()
-plt.plot(t_array, var_post, 'b.', alpha=0.2)
-plt.axhline(0, color='k')
-plt.title('Var Post X')
-plt.xlabel('Time (s)')
-plt.ylabel('Var (m)')
+#~ plt.figure()
+#~ plt.plot(t_array, var_post, 'b.', alpha=0.2)
+#~ plt.axhline(0, color='k')
+#~ plt.title('Var Post X')
+#~ plt.xlabel('Time (s)')
+#~ plt.ylabel('Var (m)')
 
 #~ # Plot Rolling Variances
 ################################# Process:
@@ -326,7 +328,7 @@ plt.ylabel('Var (m)')
 #~ plt.title('Sorted Process Roll Var')
 #~ plt.xlabel('Range')
 #~ plt.ylabel('Variance')
-#~ ################################# Sonar:
+################################# Sonar:
 #~ plt.figure()
 #~ plt.plot(sorted_range,sonar2_obj.roll_var, '.', alpha=0.2)
 #~ plt.axhline(0, color='k')
