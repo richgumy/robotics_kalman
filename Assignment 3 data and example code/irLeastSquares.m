@@ -27,7 +27,7 @@ function [e] = irLeastSquares(filename)
     
     % Specified Sensor ranges
     sensors_min_max_values = [0.02 3;
-                    0.45 5;
+                    0.4 5;
                     0.15 0.3;
                     0.04 0.3;
                     0.1 0.8;
@@ -102,11 +102,19 @@ function [e] = irLeastSquares(filename)
         k4(i,:) = lsqcurvefit(poly4_funct,k4_0,sorted_range,var_dist);
         e_0 = [0 0 0];
         e(i,:) = lsqcurvefit(exp_funct,e_0,sorted_range,var_dist);
-        
+               
         figure
         plot(sorted_range, var_dist, 'g.',x_range,poly2_funct(k2(i,:),...
                 x_range),'b-',x_range,poly4_funct(k4(i,:),x_range),'r-',...
                 x_range,exp_funct(e(i,:),x_range),'k-')
+        if (i > 2)
+            title_ = sprintf('IR %d Variance Fit',i-2);
+        else
+            title_ = sprintf('Sonar %d Variance Fit',i);
+        end
+        title(title_)
+        xlabel('Range (m)');
+        ylabel('Variance (m^2)');
         
         legend('Data', 'Poly2 fit', 'Poly4 fit', 'Exp fit'); 
 
