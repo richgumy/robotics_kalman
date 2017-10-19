@@ -11,7 +11,7 @@
 % • ir3 is a Sharp GP2Y0A21YK infrared rangefinder (10–80cm)
 % • ir4 is a Sharp GP2Y0A710K0F infrared rangefinder (1–5m)
    
-function [e] = irLeastSquares(filename)
+function [k2] = irLeastSquares(filename)
     close all
     mat = csvread(filename,1,1);
 

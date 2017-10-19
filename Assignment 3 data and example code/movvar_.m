@@ -1,4 +1,4 @@
-function [var_] = movvar(A,k)
+function [var_] = movvar_(A,k)
 % A is sample data, k must be an even number
     if mod(k,2)
         error('Parameter, k, for movvar(A,k) must be even')
